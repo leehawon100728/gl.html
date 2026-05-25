@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>갓생 살기 RPG 시스템 (자동저장)</title>
+    <style>
+        :root {
+            --bg-color: #1a1a2e;
+            --card-bg: #16213e;
+            --accent: #0f3460;
+            --text-color: #e4e6eb;
+            --gold: #ffd700;
+        }
+
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+        }
+
+        h1, h2 {
+            text-align: center;
+            color: var(--gold);
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+
+        .dashboard {
+            background-color: var(--card-bg);
+            border: 2px solid var(--gold);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .coin-display {
+            color: var(--gold);
+        }
+
+        .tab-menu {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            padding: 12px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1rem;
+            transition: 0.2s;
+        }
+
+        .tab-btn:first-child { border-radius: 8px 0 0 8px; }
+        .tab-btn:last-child { border-radius: 0 8px 8px 0; }
+        .tab-btn.active { background-color: var(--gold); color: black; }
+
+        .tab-content {
+            display: none;
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            min-height: 300px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        .tab-content.active { display: block; }
+
+        .item-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .grid-list {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .card {
+            background-color: #0f3460;
+            border-radius: 8px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            border: 1px solid #22254b;
+        }
+
+        .card h4 { margin: 0 0 5px 0; color: #fff; }
+        .card p { margin: 0 0 10px 0; font-size: 0.85rem; color: #ccc; }
+
+        button.action-btn {
+            background-color: var(--gold);
+            color: black;
+            border: none;
+            padding: 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button.action-btn:hover { opacity: 0.9; }
+
+        .inventory-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        .inv-slot {
+            background-color: #1a1a2e;
+            border: 2px solid #444;
+            border-radius: 8px;
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .inv-slot:hover { border-color: var(--gold); }
+        .inv-slot .count {
+            position: absolute;
+            top: 4px;
+            right: 6px;
+            background: red;
+            color: white;
+            border-radius: 50%;
+            padding: 2px 6px;
+            font-size: 0.7rem;
+            font-weight: bold;
+        }
+
+        .inv-icon { font-size: 2rem; margin-bottom: 2px; }
+
+        .gacha-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .gacha-box {
+            text-align: center;
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 16px;
+            border: 3px solid var(--gold);
+            max-width: 80%;
+        }
+
+        .box-anim {
+            font-size: 5rem;
+            margin-bottom: 20px;
+            display: inline-block;
+        }
+
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(0px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(2px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(2px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+
+        .shaking { animation: shake 0.5s infinite; }
+
+        .reward-text {
+            font-size: 1.5rem;
+            color: var(--gold);
+            margin-top: 20px;
+            font-weight: bold;
+            min-height: 30px;
+        }
+
+        .log-box {
+            margin-top: 15px;
+            background: #000;
+            padding: 10px;
+            border-radius: 6px;
+            height: 80px;
+            overflow-y: auto;
+            font-size: 0.8rem;
+            color: #00ff00;
+            font-family: monospace;
+        }
+
+        .reset-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            margin-top: 10px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>⚔️ 내 인생 RPG 시스템 ⚔️</h1>
+    
+    <div class="dashboard">
+        <div>💰 <span id="coin-amount" class="coin-display">100</span> 코인</div>
+        <div>📅 연속 출석: <span id="attendance-count">0</span>일</div>
+    </div>
+
+    <div class="tab-menu">
+        <button class="tab-btn active" onclick="openTab('quests')">퀘스트</button>
+        <button class="tab-btn" onclick="openTab('inventory')">인벤토리</button>
+        <button class="tab-btn" onclick="openTab('shop')">상점</button>
+    </div>
+
+    <div id="quests" class="tab-content active">
+        <h2>📜 완료 처리할 보드</h2>
+        <div class="item-list">
+            <div class="card" style="flex-direction:row; align-items:center;">
+                <div style="flex:1;">
+                    <h4>🎯 깔짝 공부 완료 (5분+)</h4>
+                    <p>보상: 100코인 + 상자 C</p>
+                </div>
+                <button class="action-btn" onclick="completeQuest('깔짝')">완료</button>
+            </div>
+            <div class="card" style="flex-direction:row; align-items:center;">
+                <div style="flex:1;">
+                    <h4>🎯 짧은 공부 완료 (15분)</h4>
+                    <p>보상: 200코인 + 상자 B</p>
+                </div>
+                <button class="action-btn" onclick="completeQuest('짧은')">완료</button>
+            </div>
+            <div class="card" style="flex-direction:row; align-items:center;">
+                <div style="flex:1;">
+                    <h4>🎯 중간 공부 완료 (30분)</h4>
+                    <p>보상: 500코인 + 상자 A</p>
+                </div>
+                <button class="action-btn" onclick="completeQuest('중간')">완료</button>
+            </div>
+            <div class="card" style="flex-direction:row; align-items:center;">
+                <div style="flex:1;">
+                    <h4>🎯 큰 공부 완료 (1시간)</h4>
+                    <p>보상: 1000코인 + 상자 S</p>
+                </div>
+                <button class="action-btn" onclick="completeQuest('큰')">완료</button>
+            </div>
+            <div class="card" style="flex-direction:row; align-items:center;">
+                <div style="flex:1;">
+                    <h4>🥁 드럼 연습 (곡당 1회)</h4>
+                    <p>보상: 50코인</p>
+                </div>
+                <button class="action-btn" onclick="completeQuest('드럼')">완료</button>
+            </div>
+            <div class="card" style="flex-direction:row; align-items:center;">
+                <div style="flex:1;">
+                    <h4>🎸 기타 연습 (10분당)</h4>
+                    <p>보상: 100코인</p>
+                </div>
+                <button class="action-btn" onclick="completeQuest('기타')">완료</button>
+            </div>
+            <div class="card" style="flex-direction:row; align-items:center;">
+                <div style="flex:1;">
+                    <h4>🏋️ 헬스 운동 (한 부위당)</h4>
+                    <p>보상: 150코인</p>
+                </div>
+                <div>
+                    <button class="action-btn" onclick="completeQuest('헬스1')" style="margin-bottom:2px;">1부위</button>
+                    <button class="action-btn" onclick="completeQuest('헬스2')" style="margin-bottom:2px; background:#4cd137;">2부위</button>
+                    <button class="action-btn" onclick="completeQuest('헬스3')" style="background:#00a8ff;">3부위</button>
+                </div>
+            </div>
+            <div class="card" style="flex-direction:row; align-items:center;">
+                <div style="flex:1;">
+                    <h4>📅 오늘 출석 체크 (1시간 이상 공부 필수)</h4>
+                    <p>보상: 100코인 (7단위는 +700코인 보너스!)</p>
+                </div>
+                <button class="action-btn" onclick="checkAttendance()" id="att-btn" style="background:#e67e22; color:white;">출석!</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="inventory" class="tab-content">
+        <h2>🎒 보유 아이템 가방</h2>
+        <div class="inventory-grid">
+            <div class="inv-slot" onclick="openBox('C')"><span class="inv-icon">📦</span>📦 상자 C<span class="count" id="boxC-count">0</span></div>
+            <div class="inv-slot" onclick="openBox('B')"><span class="inv-icon">🎁</span>🎁 상자 B<span class="count" id="boxB-count">0</span></div>
+            <div class="inv-slot" onclick="openBox('A')"><span class="inv-icon">💎</span>💎 상자 A<span class="count" id="boxA-count">0</span></div>
+            <div class="inv-slot" onclick="openBox('S')"><span class="inv-icon">👑</span>👑 상자 S<span class="count" id="boxS-count">0</span></div>
+        </div>
+        <h3 style="color:var(--gold); border-bottom:1px solid #444; padding-bottom:5px; margin-top:20px;">자유시간 이용권 목록</h3>
+        <div id="pass-list" class="item-list"></div>
+        
+        <button class="reset-btn" onclick="resetGameData()">⚠️ 전체 데이터 초기화 (처음부터 시작)</button>
+    </div>
+
+    <div id="shop" class="tab-content">
+        <h2>🛒 코인 소모 상점</h2>
+        <div class="grid-list">
+            <div class="card">
+                <h4>⏱️ 자유시간 30분</h4>
+                <p>가격: 1000 코인</p>
+                <button class="action-btn" onclick="buyTicket('30분', 1000)">구매하기</button>
+            </div>
+            <div class="card">
+                <h4>⏱️ 자유시간 1시간</h4>
+                <p>가격: 2000 코인</p>
+                <button class="action-btn" onclick="buyTicket('1시간', 2000)">구매하기</button>
+            </div>
+            <div class="card">
+                <h4>⏱️ 자유시간 1시간 30분</h4>
+                <p>가격: 3000 코인</p>
+                <button class="action-btn" onclick="buyTicket('1.5시간', 3000)">구매하기</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="log-box" id="system-log">시스템 데이터 로드 완료. 데이터를 자동으로 저장 중입니다!</div>
+</div>
+
+<div class="gacha-overlay" id="gacha-screen">
+    <div class="gacha-box">
+        <h2 id="gacha-title">상자 개봉 중...</h2>
+        <div class="box-anim" id="gacha-cube">📦</div>
+        <div class="reward-text" id="gacha-result"></div>
+        <button class="action-btn" id="gacha-close-btn" style="display:none; margin-top:20px; padding:10px 20px;" onclick="closeGachaScreen()">확인 완료</button>
+    </div>
+</div>
+
+<script>
+    // --- 세이브 데이터 로드 및 초기화 로직 ---
+    const defaultState = {
+        coins: 100,
+        attendance: 0,
+        lastAttendanceDate: "",
+        boxes: { C: 0, B: 0, A: 0, S: 0 },
+        passes: {
+            "5분 이용권": 0,
+            "10분 이용권": 0,
+            "15분 이용권": 0,
+            "30분 이용권": 0,
+            "1시간 이용권": 0,
+            "1.5시간 이용권": 0
+        }
+    };
+
+    let state = loadGameData();
+    updateUI();
+    checkAttendanceButtonStatus();
+
+    function openTab(tabId) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        event.currentTarget.classList.add('active');
+    }
+
+    function addLog(text) {
+        const logBox = document.getElementById('system-log');
+        logBox.innerHTML += `<br>> ${text}`;
+        logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    // --- 💾 로컬 저장소 시스템 함수 ---
+    function saveGameData() {
+        localStorage.setItem('lifeRpgSaveData', JSON.stringify(state));
+    }
+
+    function loadGameData() {
+        const saved = localStorage.getItem('lifeRpgSaveData');
+        if (saved) {
+            try {
+                return JSON.parse(saved);
+            } catch(e) {
+                return {...defaultState};
+            }
+        }
+        return {...defaultState};
+    }
+
+    function resetGameData() {
+        if(confirm('정말로 모든 데이터를 리셋하고 처음부터 시작하시겠습니까?')) {
+            localStorage.removeItem('lifeRpgSaveData');
+            state = {...defaultState};
+            state.boxes = { C: 0, B: 0, A: 0, S: 0 };
+            state.passes = { "5분 이용권": 0, "10분 이용권": 0, "15분 이용권": 0, "30분 이용권": 0, "1시간 이용권": 0, "1.5시간 이용권": 0 };
+            updateUI();
+            
+            const attBtn = document.getElementById('att-btn');
+            attBtn.disabled = false;
+            attBtn.innerText = '출석!';
+            attBtn.style.background = '#e67e22';
+            
+            addLog('데이터가 완전 초기화되었습니다.');
+        }
+    }
+
+    function checkAttendanceButtonStatus() {
+        const todayStr = new Date().toDateString();
+        if (state.lastAttendanceDate === todayStr) {
+            const attBtn = document.getElementById('att-btn');
+            attBtn.disabled = true;
+            attBtn.innerText = '출석 완료';
+            attBtn.style.background = '#444';
+        }
+    }
+
+    function updateUI() {
+        document.getElementById('coin-amount').innerText = state.coins;
+        document.getElementById('attendance-count').innerText = state.attendance;
+        
+        document.getElementById('boxC-count').innerText = state.boxes.C;
+        document.getElementById('boxB-count').innerText = state.boxes.B;
+        document.getElementById('boxA-count').innerText = state.boxes.A;
+        document.getElementById('boxS-count').innerText = state.boxes.S;
+
+        const passList = document.getElementById('pass-list');
+        passList.innerHTML = '';
+        let hasPass = false;
+
+        for (const [name, count] of Object.entries(state.passes)) {
+            if (count > 0) {
+                hasPass = true;
+                passList.innerHTML += `
+                    <div class="card" style="flex-direction:row; align-items:center; background:#1e272e;">
+                        <div style="flex:1;"><h4>🎟️ ${name}</h4><p>보유 수량: ${count}개</p></div>
+                        <button class="action-btn" onclick="usePass('${name}')" style="background:#00d2d3;">사용</button>
+                    </div>`;
+            }
+        }
+        if (!hasPass) {
+            passList.innerHTML = '<p style="color:#888; text-align:center; padding:10px;">보유 중인 자유시간 이용권이 없습니다.</p>';
+        }
+    }
+
+    // 퀘스트 처리
+    function completeQuest(type) {
+        if (type === '깔짝') {
+            state.coins += 100; state.boxes.C++;
+            addLog('깔짝 공부 완료! 100코인과 상자C 획득.');
+        } else if (type === '짧은') {
+            state.coins += 200; state.boxes.B++;
+            addLog('짧은 공부 완료! 200코인과 상자B 획득.');
+        } else if (type === '중간') {
+            state.coins += 500; state.boxes.A++;
+            addLog('중간 공부 완료! 500코인과 상자A 획득.');
+        } else if (type === '큰') {
+            state.coins += 1000; state.boxes.S++;
+            addLog('큰 공부 완료! 1000코인과 상자S 획득.');
+        } else if (type === '드럼') {
+            state.coins += 50;
+            addLog('드럼 1곡 완료! 50코인 획득.');
+        } else if (type === '기타') {
+            state.coins += 100;
+            addLog('기타 연습 10분 완료! 100코인 획득.');
+        } else if (type === '헬스1') {
+            state.coins += 150;
+            addLog('헬스 1개 부위 격파! 150코인 획득.');
+        } else if (type === '헬스2') {
+            state.coins += 300; state.boxes.C++;
+            addLog('헬스 2개 부위 콤보! 300코인과 보너스 상자C 획득.');
+        } else if (type === '헬스3') {
+            state.coins += 450; state.boxes.B++;
+            addLog('헬스 3개 부위 하드코어! 450코인과 보너스 상자B 획득.');
+        }
+        saveGameData();
+        updateUI();
+    }
+
+    // 출석 체크 처리 (하루 1번 기록 보존)
+    function checkAttendance() {
+        const todayStr = new Date().toDateString();
+        if(state.lastAttendanceDate === todayStr) {
+            alert('오늘은 이미 출석 체크를 하셨습니다!');
+            return;
+        }
+
+        state.attendance += 1;
+        state.lastAttendanceDate = todayStr;
+        state.coins += 100;
+        let text = `오늘의 출석이 인정되었습니다! +100 코인.`;
+
+        if (state.attendance % 7 === 0) {
+            state.coins += 700;
+            text += ` 🎯 [${state.attendance}일차 보너스!] 추가 700코인 획득!`;
+        }
+        
+        addLog(text);
+        checkAttendanceButtonStatus();
+        saveGameData();
+        updateUI();
+    }
+
+    // 상점 구매
+    function buyTicket(timeText, cost) {
+        if (state.coins < cost) {
+            alert('코인이 부족합니다! 퀘스트를 더 깨고 오세요.');
+            return;
+        }
+        state.coins -= cost;
+        state.passes[`${timeText} 이용권`]++;
+        addLog(`상점에서 [자유시간 ${timeText} 이용권]을 구매했습니다. (-${cost}코인)`);
+        saveGameData();
+        updateUI();
+    }
+
+    // 이용권 사용
+    function usePass(name) {
+        if (state.passes[name] > 0) {
+            state.passes[name]--;
+            addLog(`⚡ [${name}]을 사용했습니다! 자유시간 타이머 작동!`);
+            alert(`[${name}]이 발동되었습니다! 스마트폰/게임 제한이 해제됩니다.`);
+            saveGameData();
+            updateUI();
+        }
+    }
+
+    // 상자 개봉
+    function openBox(grade) {
+        if (state.boxes[grade] <= 0) {
+            alert(`개봉할 상자 ${grade}가 없습니다!`);
+            return;
+        }
+        state.boxes[grade]--;
+        saveGameData();
+        updateUI();
+
+        const overlay = document.getElementById('gacha-screen');
+        const cube = document.getElementById('gacha-cube');
+        const resText = document.getElementById('gacha-result');
+        const closeBtn = document.getElementById('gacha-close-btn');
+        const title = document.getElementById('gacha-title');
+
+        title.innerText = `상자 ${grade} 개봉 중...`;
+        cube.innerText = (grade === 'C') ? '📦' : (grade === 'B') ? '🎁' : (grade === 'A') ? '💎' : '👑';
+        resText.innerText = '';
+        closeBtn.style.display = 'none';
+        overlay.style.display = 'flex';
+        cube.classList.add('shaking');
+
+        setTimeout(() => {
+            cube.classList.remove('shaking');
+            let result = calculateBoxReward(grade);
+            
+            if(result.isJackpot) {
+                resText.innerHTML = `💥💥 1% 확률 행운 대박!! 💥💥<br>💰 ${result.coins} 코인 획득!`;
+            } else if(result.freeTime) {
+                resText.innerHTML = `🎟️ 당첨! [자유시간 ${result.freeTime} 이용권]<br>💰 ${result.coins} 코인 획득!`;
+            } else {
+                resText.innerHTML = `💰 보상: ${result.coins} 코인 획득!`;
+            }
+
+            state.coins += result.coins;
+            if(result.freeTime) {
+                state.passes[`${result.freeTime} 이용권`]++;
+            }
+            addLog(`상자 ${grade} 개봉 완료 -> 코인+${result.coins} ${result.freeTime ? ', 이용권 추가' : ''}`);
+            
+            closeBtn.style.display = 'inline-block';
+            saveGameData();
+            updateUI();
+        }, 1500);
+    }
+
+    function closeGachaScreen() {
+        document.getElementById('gacha-screen').style.display = 'none';
+    }
+
+    function calculateBoxReward(grade) {
+        let randJackpot = Math.random() * 100;
+        let randFreeTime = Math.random() * 100;
+        
+        let isJackpot = randJackpot <= 1.0;
+        let hasFreeTime = randFreeTime <= 20.0;
+        
+        let coins = 0;
+        let freeTime = null;
+
+        if (grade === 'C') {
+            coins = isJackpot ? Math.floor(Math.random() * 901) + 100 : Math.floor(Math.random() * 91) + 10;
+            if (hasFreeTime) freeTime = '5분';
+        } else if (grade === 'B') {
+            coins = isJackpot ? Math.floor(Math.random() * 1801) + 200 : Math.floor(Math.random() * 181) + 20;
+            if (hasFreeTime) freeTime = '10분';
+        } else if (grade === 'A') {
+            coins = isJackpot ? Math.floor(Math.random() * 4501) + 500 : Math.floor(Math.random() * 451) + 50;
+            if (hasFreeTime) freeTime = '15분';
+        } else if (grade === 'S') {
+            coins = isJackpot ? Math.floor(Math.random() * 9001) + 1000 : Math.floor(Math.random() * 901) + 100;
+            if (hasFreeTime) freeTime = '30분';
+        }
+
+        return { coins, freeTime, isJackpot };
+    }
+</script>
+</body>
+</html>
